@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 
 const SwipeoutBtn = React.createClass({
@@ -25,6 +26,7 @@ const SwipeoutBtn = React.createClass({
     text: PropTypes.string,
     type: PropTypes.string,
     underlayColor: PropTypes.string,
+    weight: PropTypes.number
   },
 
   getDefaultProps: function() {
@@ -40,6 +42,7 @@ const SwipeoutBtn = React.createClass({
       text: 'Click me',
       type: '',
       width: 0,
+      weight: 1,
     };
   },
 
@@ -157,9 +160,9 @@ const Swipeout = React.createClass({
     }
     this.refs.swipeoutContent.measure((ox, oy, width, height) => {
       this.setState({
-        btnWidth: (width/5),
-        btnsLeftWidth: this.props.left ? (width/5)*this.props.left.length : 0,
-        btnsRightWidth: this.props.right ? (width/5)*this.props.right.length : 0,
+        btnWidth: (width/this.props.weight),
+        btnsLeftWidth: this.props.left ? (width/this.props.weight)*this.props.left.length : 0,
+        btnsRightWidth: this.props.right ? (width/this.props.weight)*this.props.right.length : 0,
         swiping: true,
         timeStart: (new Date()).getTime(),
       });
@@ -314,8 +317,10 @@ const Swipeout = React.createClass({
           {...this._panResponder.panHandlers}>
           {this.props.children}
         </View>
-        { this._renderButtons(this.props.right, isRightVisible, styleRight) }
-        { this._renderButtons(this.props.left, isLeftVisible, styleLeft) }
+        <View style={Platform.OS == 'ios' ? {position: 'absolute', left: 0, top: 0, height: this.state.contentHeight} : {position: 'absolute', left: 0, top: 0, width: this.state.contentWidth, height: this.state.contentHeight}} {...this._panResponder.panHandlers}>
+          { this._renderButtons(this.props.right, isRightVisible, styleRight) }
+          { this._renderButtons(this.props.left, isLeftVisible, styleLeft) }
+        </View>
       </View>
     );
   },
