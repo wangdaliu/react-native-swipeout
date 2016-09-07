@@ -110,6 +110,8 @@ const Swipeout = React.createClass({
     scroll: PropTypes.func,
     style: View.propTypes.style,
     sensitivity: PropTypes.number,
+    open: PropTypes.bool,
+    allowSwipeOnAndroid: PropTypes.bool,
   },
 
   getDefaultProps: function() {
@@ -117,6 +119,8 @@ const Swipeout = React.createClass({
       rowID: -1,
       sectionID: -1,
       sensitivity: 0,
+      open: false,
+      allowSwipeOnAndroid: true,
     };
   },
 
@@ -141,7 +145,8 @@ const Swipeout = React.createClass({
       onStartShouldSetPanResponder: (event, gestureState) => true,
       onMoveShouldSetPanResponder: (event, gestureState) =>
         Math.abs(gestureState.dx) > this.props.sensitivity &&
-        Math.abs(gestureState.dy) > this.props.sensitivity,
+        Math.abs(gestureState.dy) > this.props.sensitivity &&
+        (Platform.OS == 'android' && this.state.openedRight || this.props.allowSwipeOnAndroid || Platform.OS == 'ios'),
       onPanResponderGrant: this._handlePanResponderGrant,
       onPanResponderMove: this._handlePanResponderMove,
       onPanResponderRelease: this._handlePanResponderEnd,
@@ -152,9 +157,13 @@ const Swipeout = React.createClass({
 
   componentWillReceiveProps: function(nextProps) {
     if (nextProps.close) this._close();
+    if (nextProps.open) this._open();
   },
 
   _handlePanResponderGrant: function(e: Object, gestureState: Object) {
+    if(Platform.OS == 'android' && !this.state.openedRight && !this.props.allowSwipeOnAndroid) {
+      return
+    }
     if(this.props.onOpen){
       this.props.onOpen(this.props.sectionID, this.props.rowID);
     }
@@ -170,6 +179,9 @@ const Swipeout = React.createClass({
   },
 
   _handlePanResponderMove: function(e: Object, gestureState: Object) {
+    if(Platform.OS == 'android' && !this.state.openedRight && !this.props.allowSwipeOnAndroid) {
+      return
+    }
     var posX = gestureState.dx;
     var posY = gestureState.dy;
     var leftWidth = this.state.btnsLeftWidth;
@@ -213,6 +225,10 @@ const Swipeout = React.createClass({
     if (timeDiff) {
       var openRight = posX < -openX/10 && !this.state.openedLeft;
       var openLeft = posX > openX/10 && !this.state.openedRight;
+    }
+
+    if (!openRight && posX <= 0 && posX >-1 && contentPos < 0) {
+      return
     }
 
     if (this.state.swiping) {
@@ -263,6 +279,24 @@ const Swipeout = React.createClass({
       openedRight: false,
       openedLeft: false,
     });
+  },
+
+  _open: function() {
+    if (Platform.OS == 'ios') {
+      return
+    }
+    this.refs.swipeoutContent.measure((ox, oy, width, height) => {
+      this.setState({
+        btnWidth: (width/this.props.weight),
+        btnsLeftWidth: this.props.left ? (width/this.props.weight)*this.props.left.length : 0,
+        btnsRightWidth: this.props.right ? (width/this.props.weight)*this.props.right.length : 0,
+        swiping: true,
+        timeStart: (new Date()).getTime(),
+      });
+    });
+    var contentWidth = this.state.contentWidth;
+    this._tweenContent('contentPos', -contentWidth);
+    this.setState({ contentPos: -contentWidth, openedLeft: false, openedRight: true });
   },
 
   render: function() {
@@ -317,10 +351,8 @@ const Swipeout = React.createClass({
           {...this._panResponder.panHandlers}>
           {this.props.children}
         </View>
-        <View style={Platform.OS == 'ios' ? {position: 'absolute', left: 0, top: 0, height: this.state.contentHeight} : {position: 'absolute', left: 0, top: 0, width: this.state.contentWidth, height: this.state.contentHeight}} {...this._panResponder.panHandlers}>
           { this._renderButtons(this.props.right, isRightVisible, styleRight) }
           { this._renderButtons(this.props.left, isLeftVisible, styleLeft) }
-        </View>
       </View>
     );
   },
@@ -335,7 +367,7 @@ const Swipeout = React.createClass({
 
   _renderButtons: function(buttons, isVisible, style) {
     if (buttons && isVisible) {
-      return( <View style={style}>
+      return( <View style={[style, {position: 'absolute'}]} {...this._panResponder.panHandlers}>
         { buttons.map(this._renderButton) }
       </View>);
     } else {
