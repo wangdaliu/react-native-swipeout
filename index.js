@@ -112,6 +112,7 @@ const Swipeout = React.createClass({
     sensitivity: PropTypes.number,
     open: PropTypes.bool,
     allowSwipeOnAndroid: PropTypes.bool,
+    swipeEnabled: PropTypes.bool,
   },
 
   getDefaultProps: function() {
@@ -121,6 +122,7 @@ const Swipeout = React.createClass({
       sensitivity: 0,
       open: false,
       allowSwipeOnAndroid: true,
+      swipeEnabled: true,
     };
   },
 
@@ -141,7 +143,7 @@ const Swipeout = React.createClass({
   },
 
   componentWillMount: function() {
-    this._panResponder = PanResponder.create({
+    const panHandlers = this.props.swipeEnabled ? {
       onStartShouldSetPanResponder: (event, gestureState) => true,
       onMoveShouldSetPanResponder: (event, gestureState) =>
         Math.abs(gestureState.dx) > this.props.sensitivity &&
@@ -152,7 +154,9 @@ const Swipeout = React.createClass({
       onPanResponderRelease: this._handlePanResponderEnd,
       onPanResponderTerminate: this._handlePanResponderEnd,
       onShouldBlockNativeResponder: (event, gestureState) => true,
-    });
+    } : {}
+
+    this._panResponder = PanResponder.create(panHandlers);
   },
 
   componentWillReceiveProps: function(nextProps) {
@@ -294,7 +298,7 @@ const Swipeout = React.createClass({
         timeStart: (new Date()).getTime(),
       });
     });
-    var contentWidth = this.state.contentWidth;
+    var contentWidth = this.props.swipeEnabled ? this.state.contentWidth : this.state.contentWidth * 0.3;
     this._tweenContent('contentPos', -contentWidth);
     this.setState({ contentPos: -contentWidth, openedLeft: false, openedRight: true });
   },
